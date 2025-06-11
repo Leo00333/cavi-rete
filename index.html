@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ricerca Cavi di rete</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #1e1e2f;
+      color: #ddd;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px;
+      overflow: auto;
+    }
+    .container {
+      max-width: 1200px; 
+      width: 100%;
+      background: #252545;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.7);
+      color: #ddd;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-weight: 800;
+      color: #ff4c4c;
+      letter-spacing: 1.2px;
+    }
+    .filtro-box {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .filter-group label {
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+    .filter-group input[type="text"] {
+      padding: 10px 14px;
+      border: 1.5px solid #444;
+      border-radius: 8px;
+      background: #1a1a3a;
+      color: #eee;
+      font-size: 1rem;
+      transition: border-color 0.25s ease;
+    }
+    .filter-group input[type="text"]:focus {
+      border-color: #ff4c4c;
+      outline: none;
+    }
+    #btnFiltra {
+      grid-column: 1 / -1;
+      padding: 14px 0;
+      background: #ff4c4c;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: 5px;
+    }
+    #btnFiltra:disabled {
+      background: #7a3a3a;
+      cursor: not-allowed;
+    }
+    #btnFiltra:hover:not(:disabled) {
+      background: #ff1a1a;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      user-select: text;
+      table-layout: fixed;
+      border: 2px solid #444;
+      background: #2d2d4d;
+      color: #eee;
+    }
+    th, td {
+      padding: 12px 16px;
+      border: 1px solid #444;
+      text-align: left;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    th {
+      background-color: #ff4c4c;
+      color: #fff;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      box-shadow: 0 3px 8px rgba(255, 76, 76, 0.6);
+    }
+    tbody tr:nth-child(even) {
+      background: #38385c;
+    }
+    tbody tr:hover {
+      background: #ff4c4c;
+      color: #fff;
+      cursor: default;
+    }
+
+    table td:nth-child(2) {
+      font-size: 0.7rem;
+      max-width: 200px;
+      white-space: normal;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      line-height: 1.1em;
+      max-height: 4.4em;
+      word-wrap: break-word;
+    }
+
+    @media (max-width: 720px) {
+      .filtro-box {
+        grid-template-columns: 1fr;
+      }
+      #btnFiltra {
+        font-size: 1.1rem;
+      }
+    }
+
+    #sacmi {
+      height: 100px;
+      width: 150px;
+      position: absolute;
+      top: 50px;
+      left: 1695px;
+    }
+
+    /* Stile del messaggio di benvenuto */
+    #benvenuto {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #ff4c4c;
+      color: white;
+      padding: 12px 26px;
+      border-radius: 999px;
+      font-size: 1rem;
+      font-weight: 700;
+      box-shadow: 0 4px 10px rgba(255, 76, 76, 0.6);
+      opacity: 0;
+      animation: fadeInOut 4s forwards;
+      z-index: 9999;
+    }
+
+    @keyframes fadeInOut {
+      0%   { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      10%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+      80%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    }
+
+  </style>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <link rel="website icon" type="png" href="https://vectorseek.com/wp-content/uploads/2023/11/Sacmi-Icon-Logo-Vector.svg-.png">
+</head>
+<body>
+  <div id="benvenuto">Benvenuto! Carica un file per iniziare.</div>
+
+  <a href="https://www.sacmi.it/" target="_blank"> <img src="sacmi.png" alt="" id="sacmi"></a>
+
+  <div class="container" role="main" aria-label="Contenuto principale della pagina">
+    <h1>Ricerca <a href="https://www.murrelektronik.it/it/" target="_blank" rel="noopener noreferrer" style="color:#ff9999; text-decoration:none;">Cavi di rete</a></h1>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" aria-label="Carica file Excel" />
+
+    <div class="filtro-box" aria-label="Filtri di ricerca">
+      <!-- filtri invariati -->
+      <div class="filter-group">
+        <label for="filtroConnettoreA">Connettore A:</label>
+        <input type="text" id="filtroConnettoreA" placeholder="Inserisci Connettore A" />
+      </div>
+      <div class="filter-group">
+        <label for="filtroMFA">M/F (Connettore A):</label>
+        <input type="text" id="filtroMFA" placeholder="Inserisci M/F A" />
+      </div>
+      <div class="filter-group">
+        <label for="filtroConnettoreB">Connettore B:</label>
+        <input type="text" id="filtroConnettoreB" placeholder="Inserisci Connettore B" />
+      </div>
+      <div class="filter-group">
+        <label for="filtroMFB">M/F (Connettore B):</label>
+        <input type="text" id="filtroMFB" placeholder="Inserisci M/F B" />
+      </div>
+      <div class="filter-group">
+        <label for="filtroCategoria">Categoria:</label>
+        <input type="text" id="filtroCategoria" placeholder="Inserisci Categoria" />
+      </div>
+      <div class="filter-group">
+        <label for="filtroLunghezza">Lunghezza (m):</label>
+        <input type="text" id="filtroLunghezza" placeholder="Inserisci Lunghezza" />
+      </div>
+      <div class="filter-group">
+        <label for="filtroColore">Colore:</label>
+        <input type="text" id="filtroColore" placeholder="Inserisci Colore" />
+      </div>
+      <div class="filter-group">
+        <label for="filtroPosaMobile">Posa Mobile:</label>
+        <input type="text" id="filtroPosaMobile" placeholder="X o Vuoto" />
+      </div>
+      <button id="btnFiltra" disabled>Avvia Ricerca</button>
+    </div>
+
+    <table id="tabellaRisultati" role="grid" aria-label="Risultati ricerca Cavi di rete"></table>
+  </div>
+
+  <script>
+    let dati = [];
+
+    const fileInput = document.getElementById('fileInput');
+    const btnFiltra = document.getElementById('btnFiltra');
+    const tabella = document.getElementById('tabellaRisultati');
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheet = workbook.Sheets["Data Export"];
+        if (!sheet) {
+          alert("Il foglio 'Data Export' non è stato trovato nel file Excel.");
+          return;
+        }
+        dati = XLSX.utils.sheet_to_json(sheet, {header:1});
+        if (dati.length < 2) {
+          alert("Il foglio 'Data Export' sembra essere vuoto o non avere dati sufficienti.");
+          return;
+        }
+        mostraTabella(dati);
+        btnFiltra.disabled = false;
+        tabella.scrollIntoView({behavior: 'smooth'});
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    btnFiltra.addEventListener('click', () => {
+      filtra();
+      tabella.scrollIntoView({behavior: 'smooth'});
+    });
+
+    function mostraTabella(datiFiltrati) {
+      tabella.innerHTML = "";
+
+      const headerLabels = [
+        "CODICE MATERIALE",
+        "TESTO DI BASE",
+        "TESTO DI CONTROLLO",
+        "COD COSTRUTTORE",
+        "COSTRUTTORE",
+        "CONNETTORE A TIPO",
+        "CONNETTORE A M/F",
+        "CONNETTORE B TIPO",
+        "CONNETTORE B M/F",
+        "CATEGORIA",
+        "LUNGHEZZA",
+        "COLORE",
+        "POSA MOBILE"
+      ];
+
+      const tr = document.createElement('tr');
+      headerLabels.forEach(label => {
+        const th = document.createElement('th');
+        th.textContent = label;
+        tr.appendChild(th);
+      });
+      tabella.appendChild(tr);
+
+      for (let i=1; i<datiFiltrati.length; i++) {
+        const row = datiFiltrati[i];
+        if (!row) continue;
+        const tr = document.createElement('tr');
+
+        const colonneUsate = [
+          row[0] || '', row[1] || '', row[2] || '', row[3] || '', row[4] || '',
+          row[6] || '', row[7] || '', row[8] || '', row[9] || '', row[10] || '',
+          row[11] || '', row[12] || '', row[13] || ''
+        ];
+
+        colonneUsate.forEach((c) => {
+          const td = document.createElement('td');
+          td.textContent = c;
+          tr.appendChild(td);
+        });
+        tabella.appendChild(tr);
+      }
+    }
+
+    function filtra() {
+      const filtroConnettoreA = document.getElementById('filtroConnettoreA').value.trim().toLowerCase();
+      const filtroMFA = document.getElementById('filtroMFA').value.trim().toLowerCase();
+      const filtroConnettoreB = document.getElementById('filtroConnettoreB').value.trim().toLowerCase();
+      const filtroMFB = document.getElementById('filtroMFB').value.trim().toLowerCase();
+      const filtroCategoria = document.getElementById('filtroCategoria').value.trim().toLowerCase();
+      const filtroLunghezza = document.getElementById('filtroLunghezza').value.trim().toLowerCase();
+      const filtroColore = document.getElementById('filtroColore').value.trim().toLowerCase();
+      const filtroPosaMobile = document.getElementById('filtroPosaMobile').value.trim().toLowerCase();
+
+      const datiFiltrati = dati.filter((row, index) => {
+        if (index === 0) return true;
+        if (!row) return false;
+
+        const connettoreA = (row[6] || '').toString().toLowerCase();
+        const mfa = (row[7] || '').toString().toLowerCase();
+        const connettoreB = (row[8] || '').toString().toLowerCase();
+        const mfb = (row[9] || '').toString().toLowerCase();
+        const categoria = (row[10] || '').toString().toLowerCase();
+        const lunghezza = (row[11] || '').toString().toLowerCase();
+        const colore = (row[12] || '').toString().toLowerCase();
+        const posaMobile = (row[13] || '').toString().toLowerCase();
+
+        if (filtroConnettoreA && !connettoreA.includes(filtroConnettoreA)) return false;
+        if (filtroMFA && !mfa.includes(filtroMFA)) return false;
+        if (filtroConnettoreB && !connettoreB.includes(filtroConnettoreB)) return false;
+        if (filtroMFB && !mfb.includes(filtroMFB)) return false;
+        if (filtroCategoria && !categoria.includes(filtroCategoria)) return false;
+        if (filtroLunghezza && !lunghezza.includes(filtroLunghezza)) return false;
+        if (filtroColore && !colore.includes(filtroColore)) return false;
+        if (filtroPosaMobile && !posaMobile.includes(filtroPosaMobile)) return false;
+
+        return true;
+      });
+
+      mostraTabella(datiFiltrati);
+    }
+  </script>
+</body>
+</html>
